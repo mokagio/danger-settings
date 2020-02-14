@@ -11,22 +11,21 @@ const PERIL_BOT_USER_ID: number = parseInt(process.env['PERIL_BOT_USER_ID'], 10)
 const HOLD_CONTEXTS: string[] = ["ci/circleci: Installable Build/Hold"]
 const INSTALLABLE_BUILD_CONTEXTS: string[] = ["ci/circleci: Installable Build", "ci/circleci: Test Android on Device"]
 
-async function markStatusAsSuccess(status) {
-  console.log(`Updating ${status.context} state to be success`)
+console.log(`Updating ${status.context} state to be success`)
 
-  const owner = status.repository.owner.login
-  const repo = status.repository.name
+const owner = status.repository.owner.login
+const repo = status.repository.name
 
-  const api = danger.github.api
-  await api.repos.createStatus({
-      owner: owner,
-      repo: repo,
-      context: status.context,
-      description: status.description,
-      sha: status.sha,
-      state: "success",
-      target_url: status.target_url
-  })
+const api = danger.github.api
+await api.repos.createStatus({
+  owner: owner,
+  repo: repo,
+  context: status.context,
+  description: status.description,
+  sha: status.sha,
+  state: "success",
+  target_url: status.target_url
+})
 }
 
 async function getPRsWithStatus(status) {
@@ -131,18 +130,17 @@ async function getDownloadCommentText(status) {
 }
 
 export default async (status: Status) => {
-    if (status.state == "pending" && HOLD_CONTEXTS.includes(status.context)) {
-      await markStatusAsSuccess(status)
-      await createOrUpdateComment(status, `You can trigger an installable build for these changes by visiting CircleCI [here](${status.target_url}).`)
-    } else if (status.state ==  "success" && INSTALLABLE_BUILD_CONTEXTS.includes(status.context)) {
-      const commentBody = await getDownloadCommentText(status)
-      if (commentBody === undefined) {
-        return console.log(`Could not find a comment.json or .apk file for the installable build.`)
-      }
-      await createOrUpdateComment(status, commentBody)
-    } else {
-      return console.log(
-        `Not a status we want to process for installable builds - got '${status.context}' (${status.state})`
-      )
+  if (status.state == "pending" && HOLD_CONTEXTS.includes(status.context)) {
+    await markStatusAsSuccess(status)
+    await createOrUpdateComment(status, `You can trigger an installable build for these changes by visiting CircleCI [here](${status.target_url}).`)
+  } else if (status.state ==  "success" && INSTALLABLE_BUILD_CONTEXTS.includes(status.context)) {
+    const commentBody = await getDownloadCommentText(status)
+    if (commentBody === undefined) {
+      return console.log(`Could not find a comment.json or .apk file for the installable build.`)
     }
-}
+    await createOrUpdateComment(status, commentBody)
+  } else {
+    return console.log(
+      `Not a status we want to process for installable builds - got '${status.context}' (${status.state})`
+    )
+  }
